@@ -1,3 +1,4 @@
+import datetime
 from django.test import TestCase
 
 from mock import patch
@@ -29,6 +30,19 @@ class SMSTest(TestCase):
             ValueError, create_sms, to="+62800000000001", message="Test",
             backend="unavailable_backends"
         )
+
+        self.assertRaises(
+            ValueError, create_sms, to="+62800000000001", message="Test",
+            backend="dummy", delivery_window="delivery_window_not_tuple_of_time"
+        )
+        start_delivery_window = datetime.time(8, 0)
+        end_delivery_window = datetime.time(20, 0)
+        create_sms(to="+62800000000001", message="Test", backend='dummy',
+                   delivery_window=(start_delivery_window, end_delivery_window))
+
+        sms = SMS.objects.latest('id')
+        self.assertEqual(sms.start_of_delivery_window, start_delivery_window)
+        self.assertEqual(sms.end_of_delivery_window, end_delivery_window)
 
     @patch('sms_engine.models.SMS.dispatch')
     def test_sms_send(self, mock):
